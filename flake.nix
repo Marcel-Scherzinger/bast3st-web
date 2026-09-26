@@ -1,0 +1,34 @@
+{
+  description = "Flake for backend/frontend development";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+  };
+  outputs = inputs @ {flake-parts, ...}: let
+  in
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      imports = [];
+      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
+
+      perSystem = {pkgs, ...}: let
+      in {
+        devShells.default = pkgs.mkShell {
+          packages = [
+            pkgs.just
+            pkgs.gnumake
+            pkgs.pkg-config
+            pkgs.openssl
+            pkgs.sqlfluff
+            pkgs.sqlx-cli
+            pkgs.trunk
+            pkgs.pre-commit
+          ];
+          shellHook = ''
+          '';
+        };
+
+        formatter = pkgs.alejandra;
+      };
+    };
+}

@@ -1,0 +1,4 @@
+[migrate.defaults]
+# Specify reversible migrations by default (for `sqlx migrate create`).
+# Defaults to "inferred": uses the type of the last migration, or "simple" otherwise.
+migration-type = "reversible"
