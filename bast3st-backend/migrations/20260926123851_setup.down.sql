@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS submissions;
+DROP TABLE IF EXISTS specifications;
+DROP TABLE IF EXISTS slots;
+DROP TABLE IF EXISTS users;

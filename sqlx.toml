@@ -1,0 +1,3 @@
+# only here so that sqlx-cli commands can be run within top level
+[migrate]
+migrations-dir = "bast3st-backend/migrations"

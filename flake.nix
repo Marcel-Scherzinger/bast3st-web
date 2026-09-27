@@ -25,6 +25,8 @@
             pkgs.pre-commit
           ];
           shellHook = ''
+            export XDG_CACHE_HOME="$(mktemp -d)"
+            export DATABASE_URL="postgres://postgres:@localhost/bast3st"
           '';
         };
 
