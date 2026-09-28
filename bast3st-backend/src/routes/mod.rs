@@ -7,7 +7,8 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
     |config: &mut ServiceConfig| {
         config
             .service(check_user_slot::check_existence)
-            .service(run_submission::run_test);
+            .service(run_submission::run_test)
+            .service(run_submission::debug_spec);
     }
 }
 

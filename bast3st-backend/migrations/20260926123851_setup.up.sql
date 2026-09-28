@@ -39,3 +39,19 @@ CREATE TABLE submissions (
     -- the report that was generated
     report JSON
 );
+
+CREATE TABLE debug_submissions (
+    debid SERIAL PRIMARY KEY,
+    -- the specification this submission was checked against
+    spec JSON NOT NULL,
+    -- a timestamp when this submission was processed
+    createdat TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    -- what kind of application/medium sent the submission
+    agent VARCHAR(255),
+    -- a session id or pseudonym for the one handing in the submission
+    sessionid VARCHAR(255),
+    -- the program that was checked
+    program JSON NOT NULL,
+    -- the report that was generated
+    report JSON
+);
