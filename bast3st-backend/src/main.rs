@@ -39,7 +39,8 @@ async fn main() -> Result<(), std::io::Error> {
 
     let port = *conf.server().port();
 
-    let database = web::Data::new(if let Some(database) = conf.database() {
+    let database = web::Data::new({
+        let database = conf.database();
         let mut options = PgConnectOptions::new()
             .host(database.host())
             .username(database.username())
@@ -60,21 +61,19 @@ async fn main() -> Result<(), std::io::Error> {
                 break;
             }
             if res.is_err() {
-                log::error!("Connection error with database: {res:?}, retry in {delay}s");
+                log::error!("connection error with database: {res:?}, retry in {delay}s");
             }
             pool = res.ok();
             std::thread::sleep(std::time::Duration::from_secs(delay));
             delay *= 2;
         }
-        let pool = pool.expect("No database available");
+        let pool = pool.expect("no database available");
 
         sqlx::migrate!("./migrations/")
             .run(&pool)
             .await
             .expect("Migrations");
-        Some(pool)
-    } else {
-        None
+        pool
     });
 
     log::info!("{database:?}");
@@ -108,7 +107,7 @@ async fn main() -> Result<(), std::io::Error> {
         for origin in config.server().cors().allowed_origins() {
             cors = cors.allowed_origin(origin);
         }
-        log::info!("Set CORS-Configuration: {cors:?}");
+        log::info!("set CORS-Configuration: {cors:?}");
 
         // general setup for all apps (logging and global application data)
         let app = App::new();
@@ -123,15 +122,13 @@ async fn main() -> Result<(), std::io::Error> {
         let app = app.into_utoipa_app().openapi(api_docs::ApiDoc::openapi());
 
         // service definition
-        let app = app.service(scope("/api/v1").configure(routes::configure()));
+        let app = app.service(scope("/api/v2").configure(routes::configure()));
 
         let app = app.route("/health", web::get().to(health));
 
         // finalize api docs generation
-        let app = app
-            .openapi_service(|api| Scalar::with_url("/scalar", api))
-            .into_app();
-        app
+        app.openapi_service(|api| Scalar::with_url("/scalar", api))
+            .into_app()
     })
     .bind((std::net::Ipv4Addr::UNSPECIFIED, port))?
     .workers(conf.server().workers().unwrap_or(4))

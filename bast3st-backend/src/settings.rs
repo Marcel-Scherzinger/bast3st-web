@@ -41,7 +41,7 @@ impl Default for ServerSettings {
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
 pub struct Settings {
     server: ServerSettings,
-    database: Option<DatabaseSettings>,
+    database: DatabaseSettings,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
@@ -52,13 +52,33 @@ pub struct DatabaseSettings {
     username: String,
     password: Option<String>,
 }
+impl Default for DatabaseSettings {
+    fn default() -> Self {
+        Self {
+            host: "/var/run/postgresql".into(),
+            port: None,
+            database: "bast3st".into(),
+            username: "postgres".into(),
+            password: None,
+        }
+    }
+}
 
 impl Settings {
     pub fn new() -> Result<Self, config::ConfigError> {
-        let Some(configpath) = std::env::args().nth(1) else {
-            log::info!("No config file as first argument, use default config");
-            return Ok(Default::default());
+        let Some(configpath) = std::env::args()
+            .nth(1)
+            .or(std::env::var("BAST3ST_CONFIG").ok())
+        else {
+            let default: Self = Default::default();
+            log::warn!("no config file as first argument, use default config: {default:?}");
+            log::warn!(
+                "the default database configuration is probably not what you want: {:?}",
+                default.database()
+            );
+            return Ok(default);
         };
+        log::warn!("reading configuration form {configpath}");
         let s = Config::builder()
             .add_source(config::File::with_name(&configpath))
             .add_source(
@@ -67,7 +87,8 @@ impl Settings {
                     .separator("__"),
             )
             .build()?;
-
-        s.try_deserialize()
+        let settings = s.try_deserialize()?;
+        log::debug!("apply configuration: {settings:?}");
+        Ok(settings)
     }
 }

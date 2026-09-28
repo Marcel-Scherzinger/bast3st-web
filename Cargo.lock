@@ -381,6 +381,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "tokio",
  "utoipa",
  "utoipa-actix-web",
  "utoipa-scalar",
@@ -389,7 +390,7 @@ dependencies = [
 [[package]]
 name = "bast3st-eval"
 version = "0.1.0"
-source = "git+https://github.com/Marcel-Scherzinger/bast3st-eval#442d15a307ea24a862db9a9a3a09e2db292e168f"
+source = "git+https://github.com/Marcel-Scherzinger/bast3st-eval#cb0f2690d2a013eac069bfcc3feaf35533bf66d4"
 dependencies = [
  "bit-set",
  "bitflags 2.13.2",
@@ -2375,6 +2376,7 @@ dependencies = [
  "rand",
  "scratch-test-model",
  "scratch-test-value",
+ "serde",
  "thiserror",
 ]
 

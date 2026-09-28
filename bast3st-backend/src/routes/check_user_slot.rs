@@ -9,6 +9,7 @@ use sqlx::PgPool;
 #[utoipa::path(
     responses(
         (status = OK, description = "body is 'true' iff user/slot exists and specification is active"),
+        (status = 500, description = "internal error"),
     ),
     params(
         ("user" = String, Path, description = "the user who owns the specification"),
@@ -28,8 +29,8 @@ pub async fn check_existence(
         r#"
         SELECT COUNT(*) > 0
         FROM users u
-        INNER JOIN slots s ON u.id = s.userid
-        INNER JOIN specification c ON c.slotid = s.id
+        INNER JOIN slots s ON u.userid = s.userid
+        INNER JOIN specifications c ON c.slotid = s.slotid
         WHERE u.username = $1 AND s.slotname = $2
           AND c.active
     "#,

@@ -1,0 +1,22 @@
+[server]
+port = 42139
+# workers = 4
+
+[server.cors]
+allowed_origins = [
+    "http://127.0.0.1",
+    "http://localhost",
+    "https://127.0.0.1",
+    "https://localhost",
+]
+
+[server.limits]
+json = 102400
+form = 102400
+
+[database]
+host = "/var/run/postgresql"
+database = "bast3st"
+# create a separate user with fewer permissions in a production system!
+username = "postgres"
+
