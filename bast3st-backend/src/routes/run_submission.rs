@@ -35,7 +35,7 @@ fn make_doc_err(err: impl Into<ProgramDocError>) -> actix_web::error::Error {
 
 #[utoipa::path(responses(
     (status = OK, description = "Successful report generation"),
-    (status = 404, description = "Unknown user/slot identifier or no active generation"),
+    (status = 400, description = "Unknown user/slot identifier or no active generation"),
     (status = 422, description = "Invalid program (`ProgramDocError`)"),
     (status = 424, description = "Invalid specification, this is not an error of the current request but informs that an invalid specification was stored in the database, what should never happen"),
     (status = 500, description = "internal error"),
@@ -59,7 +59,7 @@ pub async fn run_test(
     let doc = ProjectDoc::from_json(&program)
         .map_err(|err| make_doc_err(ProgramDocError::Model(err.to_string())))?;
 
-    let spec_content: Option<(serde_json::Value, i64, i64)> = sqlx::query_as(
+    let spec_content: Option<(serde_json::Value, i32, i32)> = sqlx::query_as(
         "SELECT content, specid, generation FROM active_specifications WHERE username = $1 AND slotname = $2",
     )
     .bind(&user).bind(&slot)
@@ -70,7 +70,7 @@ pub async fn run_test(
         actix_web::error::ErrorInternalServerError("internal error")
     })?;
     let Some((spec_content, spec_id, spec_generation)) = spec_content else {
-        return Err(actix_web::error::ErrorNotFound(
+        return Err(actix_web::error::ErrorBadRequest(
             "no active spec at user/slot",
         ));
     };
@@ -106,8 +106,10 @@ pub async fn run_test(
         Err(SpecRunError::FatalRun(err)) => Err(make_doc_err(err))?,
     };
 
-    let report_json = serde_json::to_value(&report)
-        .map_err(|_| actix_web::error::ErrorInternalServerError("internal error"))?;
+    let report_json = serde_json::to_value(&report).map_err(|err| {
+        log::error!("can't serialize report [specid={spec_id}]: {err}");
+        actix_web::error::ErrorInternalServerError("internal error")
+    })?;
 
     let storage_result = sqlx::query(
         r#"
