@@ -28,6 +28,7 @@
             export XDG_CACHE_HOME="$(mktemp -d)"
             export DATABASE_URL="postgres://postgres:@localhost/bast3st"
             export BAST3ST_CONFIG="bast3st.toml"
+            export RUST_LOG="warn"
           '';
         };
 

@@ -11,6 +11,13 @@ pub struct ServerSettings {
     limits: LimitSettings,
     workers: Option<usize>,
 }
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
+pub struct AdminServerSettings {
+    enable: bool,
+    host: Option<String>,
+    port: Option<u16>,
+    workers: Option<usize>,
+}
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
 pub struct LimitSettings {
@@ -40,6 +47,7 @@ impl Default for ServerSettings {
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
 pub struct Settings {
+    admin: Option<AdminServerSettings>,
     server: ServerSettings,
     database: DatabaseSettings,
 }

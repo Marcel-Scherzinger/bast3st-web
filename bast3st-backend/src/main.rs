@@ -1,3 +1,4 @@
+mod admin_routes;
 mod api_docs;
 mod routes;
 mod settings;
@@ -77,6 +78,41 @@ async fn main() -> Result<(), std::io::Error> {
     });
 
     log::info!("{database:?}");
+
+    if let Some(admin) = conf.admin().as_ref()
+        && *admin.enable()
+    {
+        let admin_host = admin.host().as_deref().unwrap_or("localhost");
+        let admin_port = admin.port().unwrap_or(42039);
+
+        log::warn!("start admin server api on ({admin_host}, {admin_port})");
+        let admin_server = HttpServer::new({
+            let database = database.clone();
+            move || {
+                let logger = Logger::default();
+                let app = App::new();
+                let app = app.wrap(logger).app_data(database.clone());
+
+                // service definition
+                let app = app.service(scope("/api/admin/v2").configure(admin_routes::configure()));
+                app.route("/health", web::get().to(health))
+            }
+        })
+        .bind((admin_host, admin_port))
+        .map_err(|err| {
+            log::error!("failed to start admin server api on ({admin_host}, {admin_port}): {err}");
+            err
+        })?
+        .workers(
+            conf.admin()
+                .as_ref()
+                .and_then(|a| *a.workers())
+                .unwrap_or(2),
+        );
+        tokio::spawn(admin_server.run());
+    } else {
+        log::warn!("admin server api is deactivated by configuration");
+    }
 
     let config = conf.clone();
     HttpServer::new(move || {
