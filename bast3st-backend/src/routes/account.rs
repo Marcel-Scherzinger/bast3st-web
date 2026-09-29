@@ -17,7 +17,7 @@ pub struct AccountPwdreset {
 pub struct AccountPwdconfirm {
     username: String,
     password: String,
-    new_passord: String,
+    new_password: String,
 }
 
 #[utoipa::path(
@@ -103,12 +103,12 @@ pub async fn confirm_pwd_reset(
     hasher: web::Data<Argon2<'static>>,
     database: web::Data<PgPool>,
     input: web::Json<AccountPwdconfirm>,
-) -> Result<()> {
+) -> Result<String> {
     let database: Arc<PgPool> = database.into_inner();
     let AccountPwdconfirm {
         username,
         password,
-        new_passord,
+        new_password,
     } = input.into_inner();
 
     let row: Option<(String, Option<String>)> =
@@ -142,7 +142,7 @@ pub async fn confirm_pwd_reset(
                 log::error!("[account/confirmreset] failed to parse password hash: {err}");
                 actix_web::error::ErrorInternalServerError("internal error")
             })?;
-            match hasher.verify_password(new_passord.as_bytes(), &unconfirmed_hash) {
+            match hasher.verify_password(new_password.as_bytes(), &unconfirmed_hash) {
                 Err(argon2::password_hash::Error::PasswordInvalid) => Err({
                     log::info!("tries to confirm wrong password for user={username}");
                     actix_web::error::ErrorConflict("start reset first/unconfirmed wrong")
@@ -162,7 +162,7 @@ pub async fn confirm_pwd_reset(
                 );
                 actix_web::error::ErrorInternalServerError("internal error")
             })?;
-            Ok(())
+            Ok("".to_string())
         } else {
             Err(actix_web::error::ErrorConflict(
                 "start reset first/unconfirmed wrong",

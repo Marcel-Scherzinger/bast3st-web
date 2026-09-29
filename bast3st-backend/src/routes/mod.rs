@@ -2,7 +2,9 @@ mod account;
 mod check_user_slot;
 mod run_submission;
 
-use crate::api_docs::ServiceConfig;
+use actix_web::web;
+
+use crate::{api_docs::ServiceConfig, health};
 
 pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
     |config: &mut ServiceConfig| {
@@ -11,7 +13,8 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(run_submission::run_test)
             .service(run_submission::debug_spec)
             .service(account::reset_pwd)
-            .service(account::confirm_pwd_reset);
+            .service(account::confirm_pwd_reset)
+            .route("/health", web::get().to(health));
     }
 }
 

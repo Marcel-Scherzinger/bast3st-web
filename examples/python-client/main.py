@@ -3,7 +3,7 @@ import zipfile
 import json
 
 
-def main(program_path, exercise_id: str):
+def main(program_path):
     with zipfile.ZipFile(program_path) as f:
         program = f.read("project.json")
 
@@ -25,6 +25,4 @@ def main(program_path, exercise_id: str):
 
 
 if __name__ == "__main__":
-    # main("failing-name.sb3", "j26d01a01")
-    # main("../../../scratch-test-koin2627/d01-a01-name-sol.sb3", "j26d01a01")
-    main("../../../scratch-test-koin2627/d01-a02-compare-sol.sb3", "j26d01a02")
+    main("file.sb3")
