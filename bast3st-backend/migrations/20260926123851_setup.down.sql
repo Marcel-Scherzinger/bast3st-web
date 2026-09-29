@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS debug_submissions;
 DROP TABLE IF EXISTS submissions;
 DROP TABLE IF EXISTS specifications;
 DROP TABLE IF EXISTS slots;

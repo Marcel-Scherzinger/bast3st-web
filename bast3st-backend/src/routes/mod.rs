@@ -1,3 +1,4 @@
+mod account;
 mod check_user_slot;
 mod run_submission;
 
@@ -8,7 +9,9 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
         config
             .service(check_user_slot::check_existence)
             .service(run_submission::run_test)
-            .service(run_submission::debug_spec);
+            .service(run_submission::debug_spec)
+            .service(account::reset_pwd)
+            .service(account::confirm_pwd_reset);
     }
 }
 

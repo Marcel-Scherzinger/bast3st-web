@@ -2,6 +2,7 @@ mod admin_routes;
 mod api_docs;
 mod routes;
 mod settings;
+mod utils;
 
 use api_docs::scope;
 
@@ -11,10 +12,16 @@ use actix_web::{
     middleware::Logger,
     web::{self},
 };
+use argon2::Argon2;
 use sqlx::{PgPool, postgres::PgConnectOptions};
 
 async fn health() -> HttpResponse {
     HttpResponse::Ok().body("OK")
+}
+
+fn create_hasher() -> Argon2<'static> {
+    use argon2::{Argon2, *};
+    Argon2::new(Algorithm::default(), Version::default(), Params::default())
 }
 
 #[actix_web::main]
@@ -39,6 +46,8 @@ async fn main() -> Result<(), std::io::Error> {
     });
 
     let port = *conf.server().port();
+
+    let hasher = web::Data::new(create_hasher());
 
     let database = web::Data::new({
         let database = conf.database();
@@ -85,22 +94,23 @@ async fn main() -> Result<(), std::io::Error> {
         let admin_host = admin.host().as_deref().unwrap_or("localhost");
         let admin_port = admin.port().unwrap_or(42039);
 
-        log::warn!("start admin server api on ({admin_host}, {admin_port})");
+        log::warn!("[admin-api] start admin server api on ({admin_host}, {admin_port})");
         let admin_server = HttpServer::new({
             let database = database.clone();
+            let hasher = hasher.clone();
             move || {
                 let logger = Logger::default();
                 let app = App::new();
-                let app = app.wrap(logger).app_data(database.clone());
+                let app = app.wrap(logger).app_data(database.clone()).app_data(hasher.clone());
 
                 // service definition
-                let app = app.service(scope("/api/admin/v2").configure(admin_routes::configure()));
+                let app = app.service(web::scope("/api/admin/v2").configure(admin_routes::configure()));
                 app.route("/health", web::get().to(health))
             }
         })
         .bind((admin_host, admin_port))
         .map_err(|err| {
-            log::error!("failed to start admin server api on ({admin_host}, {admin_port}): {err}");
+            log::error!("[admin-api] failed to start admin server api on ({admin_host}, {admin_port}): {err}");
             err
         })?
         .workers(
@@ -111,7 +121,7 @@ async fn main() -> Result<(), std::io::Error> {
         );
         tokio::spawn(admin_server.run());
     } else {
-        log::warn!("admin server api is deactivated by configuration");
+        log::warn!("[admin-api] admin server api is deactivated by configuration");
     }
 
     let config = conf.clone();
@@ -151,6 +161,7 @@ async fn main() -> Result<(), std::io::Error> {
             .wrap(logger)
             .wrap(cors)
             .app_data(database.clone())
+            .app_data(hasher.clone())
             .app_data(json_config)
             .app_data(form_config);
 

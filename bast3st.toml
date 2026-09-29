@@ -2,6 +2,9 @@
 port = 42139
 # workers = 4
 
+[admin]
+enable = true
+
 [server.cors]
 allowed_origins = [
     "http://127.0.0.1",

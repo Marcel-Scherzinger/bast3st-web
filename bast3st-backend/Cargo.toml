@@ -21,6 +21,8 @@ utoipa = { version = "6.0.0", default-features = false, features = ["macros", "a
 utoipa-actix-web = { version = "0.2.0" }
 utoipa-scalar = { version = "0.4.0", default-features = false, features = ["actix-web"] }
 tokio = { version = "1.53.1", features = ["rt"] }
+passwords = { version = "3.1.18" }
+argon2 = "0.6.0"
 
 [dependencies.bast3st-eval]
 git = "https://github.com/Marcel-Scherzinger/bast3st-eval"

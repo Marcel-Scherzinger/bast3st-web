@@ -1,14 +1,14 @@
 CREATE TABLE users (
     userid SERIAL PRIMARY KEY,
     username VARCHAR(255) UNIQUE NOT NULL,
-    mainpassword VARCHAR(255) NOT NULL
+    mainpassword VARCHAR(255) NOT NULL,
+    unconfirmed_pwd VARCHAR(255) NULL
 );
 
 CREATE TABLE slots (
     slotid SERIAL PRIMARY KEY,
     userid INTEGER NOT NULL REFERENCES users,
     slotname VARCHAR(255) NOT NULL,
-    slotpwd VARCHAR(255),
     UNIQUE (userid, slotname)
 );
 
