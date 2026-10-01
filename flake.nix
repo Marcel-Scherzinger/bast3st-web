@@ -12,7 +12,7 @@
       systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
 
       perSystem = {pkgs, ...}: let
-      in {
+      in rec {
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.just
@@ -30,6 +30,14 @@
             export BAST3ST_CONFIG="bast3st.toml"
             export RUST_LOG="warn"
           '';
+        };
+        packages.default = packages.bast3st-backend;
+        packages.bast3st-backend = pkgs.rustPlatform.buildRustPackage {
+          name = "bast3st-backend";
+          src = ./.;
+          buildInputs = [];
+          nativeBuildInputs = [pkgs.pkg-config];
+          cargoHash = "sha256-SGDUY8LQp4DrXqHfHiBT+XQ13d4xag7iCl3NIbl09kE=";
         };
 
         formatter = pkgs.alejandra;
