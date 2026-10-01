@@ -8,7 +8,7 @@ use sqlx::PgPool;
 
 #[utoipa::path(
     responses(
-        (status = OK, description = "body is 'true' iff user/slot exists and specification is active"),
+        (status = OK, body=bool, description = "body is 'true' iff user/slot exists and specification is active, otherwise 'false'"),
         (status = 500, description = "internal error"),
     ),
     params(
@@ -16,7 +16,9 @@ use sqlx::PgPool;
         ("slot" = String, Path, description = "the user's slot where the spec is registered"),
     )
 )]
-#[get("/check/{user}/{slot}")]
+#[get("/spec/check/{user}/{slot}")]
+/// Check specification existence
+///
 /// Returns if a specific user/slot identifier exists and the spec is active
 pub async fn check_existence(
     database: web::Data<PgPool>,

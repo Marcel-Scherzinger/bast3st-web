@@ -22,3 +22,17 @@ CREATE VIEW active_specifications AS (
     INNER JOIN users AS u ON s.userid = u.userid
     INNER JOIN cte AS a ON s.slotid = a.slotid AND c.generation = a.active_gen
 );
+
+DROP VIEW IF EXISTS specification_generations;
+CREATE VIEW specification_generations AS (
+    SELECT
+        u.userid,
+        s.slotid,
+        u.username,
+        s.slotname,
+        max(c.generation) AS max_gen
+    FROM slots AS s
+    INNER JOIN users AS u ON s.userid = u.userid
+    LEFT OUTER JOIN specifications AS c ON s.slotid = c.slotid
+    GROUP BY u.userid, s.slotid, u.username, s.slotname
+);

@@ -1,6 +1,7 @@
 mod account;
 mod check_user_slot;
 mod run_submission;
+mod upload;
 
 use actix_web::web;
 
@@ -14,6 +15,7 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(run_submission::debug_spec)
             .service(account::reset_pwd)
             .service(account::confirm_pwd_reset)
+            .service(upload::upload_spec)
             .route("/health", web::get().to(health));
     }
 }

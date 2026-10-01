@@ -55,7 +55,9 @@ fn make_doc_err(err: impl Into<ProgramDocError>) -> actix_web::error::Error {
     (status = 424, description = "Invalid specification, this is not an error of the current request but informs that an invalid specification was stored in the database, what should never happen"),
     (status = 500, description = "internal error"),
 ))]
-#[post("/run")]
+#[post("/program/run")]
+/// Run sb3-program against "user"/"slot"
+///
 /// Allows to run a sb3 document for a specific exercise
 pub async fn run_test(
     input: web::Json<RunTest>,
@@ -136,7 +138,9 @@ pub async fn run_test(
     (status = 424, description = "Invalid specification"),
     (status = 500, description = "internal error"),
 ))]
-#[post("/debug")]
+#[post("/spec/debug")]
+/// Debug a specification with a sb3 program
+///
 /// Allows to debug a specification with a sb3 document
 pub async fn debug_spec(
     input: web::Json<DebugSpec>,

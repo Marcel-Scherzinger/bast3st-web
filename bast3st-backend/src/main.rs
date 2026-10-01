@@ -104,7 +104,7 @@ async fn main() -> Result<(), std::io::Error> {
                 let app = app.wrap(logger).app_data(database.clone()).app_data(hasher.clone());
 
                 // service definition
-                let app = app.service(web::scope("/api/admin/v2").configure(admin_routes::configure()));
+                let app = app.service(web::scope("/v2/api/admin").configure(admin_routes::configure()));
                 app.route("/health", web::get().to(health))
             }
         })
@@ -169,12 +169,12 @@ async fn main() -> Result<(), std::io::Error> {
         let app = app.into_utoipa_app().openapi(api_docs::ApiDoc::openapi());
 
         // service definition
-        let app = app.service(scope("/api/v2").configure(routes::configure()));
+        let app = app.service(scope("/v2/api").configure(routes::configure()));
 
         let app = app.route("/health", web::get().to(health));
 
         // finalize api docs generation
-        app.openapi_service(|api| Scalar::with_url("/scalar", api))
+        app.openapi_service(|api| Scalar::with_url("/v2/scalar", api))
             .into_app()
     })
     .bind((std::net::Ipv4Addr::UNSPECIFIED, port))?
