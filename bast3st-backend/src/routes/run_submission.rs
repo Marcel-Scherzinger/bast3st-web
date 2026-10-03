@@ -98,7 +98,7 @@ pub async fn run_test(
             actix_web::error::ErrorFailedDependency("specification invalid")
         })?;
     let report = inner_run(
-        &conf,
+        conf.clone(),
         spec,
         agent.as_deref(),
         session.as_deref(),
@@ -166,7 +166,15 @@ pub async fn debug_spec(
             log::error!("unparsable specification: {err:?}");
             actix_web::error::ErrorFailedDependency("specification invalid")
         })?;
-    let report = inner_run(&conf, spec, agent.as_deref(), session.as_deref(), None, doc).await?;
+    let report = inner_run(
+        conf.clone(),
+        spec,
+        agent.as_deref(),
+        session.as_deref(),
+        None,
+        doc,
+    )
+    .await?;
 
     let report_json = serde_json::to_value(&report).map_err(|err| {
         log::error!("can't serialize report: {err}");
@@ -195,8 +203,29 @@ pub async fn debug_spec(
     Ok(Json(report))
 }
 
+async fn create_report_builder(conf: web::Data<Settings>) -> ReportBuilder<'static> {
+    let admin_port: Option<u16> = conf.admin_port();
+
+    ReportBuilder::new_good_limits()
+        .add_allow_network_if_check(move |(url, _data)| {
+            if admin_port.is_none_or(|ap| url.port() != Some(ap)) {
+                true
+            } else {
+                log::warn!(
+                    "network selector of bast3st-eval was blocked as it used same port as admin api"
+                );
+                false
+            }
+        })
+        .add_allow_network_cerr_check(move |(url, _data)| {
+            ["http", "https"]
+                .contains(&url.scheme())
+                .ok_or(cerr::network_policy_schemeNotAllowed)
+        })
+}
+
 async fn inner_run(
-    conf: &Settings,
+    conf: web::Data<Settings>,
     spec: bast3st_eval::spec::Bast3StSpec,
     agent: Option<&str>,
     session: Option<&str>,
@@ -208,26 +237,11 @@ async fn inner_run(
         limit_string(agent.unwrap_or_default().to_string()),
         limit_string(session.unwrap_or_default().to_string())
     );
-    let admin_port: Option<u16> = conf.admin_port();
     let report = tokio::spawn(async move {
         let spec_id = spec_id.map_or("".to_string(), |x| x.to_string());
-        let b = ReportBuilder::new_good_limits()
+        let b = create_report_builder(conf)
+            .await
             .with_spec(&spec)
-            .add_allow_network_if_check(move |(url, _data)| {
-                if admin_port.is_none_or(|ap| url.port() != Some(ap)) {
-                    true
-                } else {
-                    log::warn!(
-                        "network selector of bast3st-eval was blocked as it used same port as admin api"
-                    );
-                    false
-                }
-            })
-            .add_allow_network_cerr_check(move |(url, _data)| {
-                ["http", "https"]
-                    .contains(&url.scheme())
-                    .ok_or(cerr::network_policy_schemeNotAllowed)
-            })
             .with_log_pfx(Some(format!("{spec_id}#{id_str}").into()));
         b.run_from_unique_flag(doc).await
     })
