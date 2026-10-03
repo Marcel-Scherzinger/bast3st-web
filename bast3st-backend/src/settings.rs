@@ -99,4 +99,9 @@ impl Settings {
         log::debug!("apply configuration: {settings:?}");
         Ok(settings)
     }
+    pub fn admin_port(&self) -> Option<u16> {
+        self.admin()
+            .as_ref()
+            .map(|admin| admin.port().unwrap_or(42039))
+    }
 }

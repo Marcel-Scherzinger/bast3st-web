@@ -95,6 +95,9 @@ async fn main() -> Result<(), std::io::Error> {
         let admin_port = admin.port().unwrap_or(42039);
 
         log::warn!("[admin-api] start admin server api on ({admin_host}, {admin_port})");
+        log::warn!(
+            "[admin-api] note that no network selector of bast3st-eval will be able to contact servers on port {admin_port}"
+        );
         let admin_server = HttpServer::new({
             let database = database.clone();
             let hasher = hasher.clone();

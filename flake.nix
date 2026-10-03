@@ -11,8 +11,7 @@
       imports = [];
       systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
 
-      perSystem = {pkgs, ...}: let
-      in rec {
+      perSystem = {pkgs, ...}: rec {
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.just

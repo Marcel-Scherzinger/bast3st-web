@@ -32,6 +32,7 @@ pub async fn register_new(
 ) -> Result<String> {
     let database: Arc<PgPool> = database.into_inner();
     let User { user } = input.into_inner();
+    log::warn!("[admin-api] received message to register new user: {user:?}");
 
     let (pwd, hash) = new_password("admin-api", &hasher)?;
 
@@ -68,6 +69,7 @@ pub async fn reset_pwd(
 ) -> Result<String> {
     let database: Arc<PgPool> = database.into_inner();
     let User { user } = input.into_inner();
+    log::warn!("[admin-api] received message to reset password of user: {user:?}");
 
     let (pwd, hash) = new_password("admin-api", &hasher)?;
 
