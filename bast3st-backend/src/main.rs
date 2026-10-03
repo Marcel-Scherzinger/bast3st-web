@@ -37,7 +37,7 @@ async fn main() -> Result<(), std::io::Error> {
     // initialize standard logging, change level with `RUST_LOG` environment variable
     env_logger::init();
 
-    let conf = std::sync::Arc::new(match settings::Settings::new() {
+    let conf = web::Data::new(match settings::Settings::new() {
         Ok(c) => c,
         Err(err) => {
             log::error!("Error in settings: {err} ({:?})", std::env::args());
@@ -92,7 +92,7 @@ async fn main() -> Result<(), std::io::Error> {
         && *admin.enable()
     {
         let admin_host = admin.host().as_deref().unwrap_or("localhost");
-        let admin_port = admin.port().unwrap_or(42039);
+        let admin_port = conf.admin_port().unwrap_or(42039); // this default shouldn't occur
 
         log::warn!("[admin-api] start admin server api on ({admin_host}, {admin_port})");
         log::warn!(
@@ -101,10 +101,14 @@ async fn main() -> Result<(), std::io::Error> {
         let admin_server = HttpServer::new({
             let database = database.clone();
             let hasher = hasher.clone();
+            let conf = conf.clone();
             move || {
                 let logger = Logger::default();
                 let app = App::new();
-                let app = app.wrap(logger).app_data(database.clone()).app_data(hasher.clone());
+                let app = app.wrap(logger)
+                    .app_data(database.clone())
+                    .app_data(hasher.clone())
+                    .app_data(conf.clone());
 
                 // service definition
                 let app = app.service(web::scope("/v2/api/admin").configure(admin_routes::configure()));
@@ -165,6 +169,7 @@ async fn main() -> Result<(), std::io::Error> {
             .wrap(cors)
             .app_data(database.clone())
             .app_data(hasher.clone())
+            .app_data(config.clone())
             .app_data(json_config)
             .app_data(form_config);
 
