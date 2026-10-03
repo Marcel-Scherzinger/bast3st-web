@@ -36,7 +36,7 @@
           src = ./.;
           buildInputs = [];
           nativeBuildInputs = [pkgs.pkg-config];
-          cargoHash = "sha256-4sPeIoSBEuIPWmJcMJ0yuSofh2PwdKMq3jyEEuV8iek=";
+          cargoHash = "sha256-aom9qz9kazzj2o7b848PmhErl0tdigaPuXgGp3pOMfo=";
         };
 
         formatter = pkgs.alejandra;
