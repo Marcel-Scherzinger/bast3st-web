@@ -1,3 +1,5 @@
+#![cfg(feature = "admin-api")]
+
 use std::sync::Arc;
 
 use actix_web::{

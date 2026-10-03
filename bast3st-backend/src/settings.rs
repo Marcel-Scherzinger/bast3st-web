@@ -86,7 +86,7 @@ impl Settings {
             );
             return Ok(default);
         };
-        log::warn!("reading configuration form {configpath}");
+        log::warn!("reading configuration from {configpath}");
         let s = Config::builder()
             .add_source(config::File::with_name(&configpath))
             .add_source(

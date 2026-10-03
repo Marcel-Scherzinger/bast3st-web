@@ -33,3 +33,6 @@ package = "scratch-test-model"
 default-features = false
 features = ["sb3", "serde", "schemars"]
 
+[features]
+default = ["admin-api"]
+admin-api = []

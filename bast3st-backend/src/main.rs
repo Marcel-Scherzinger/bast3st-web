@@ -88,6 +88,12 @@ async fn main() -> Result<(), std::io::Error> {
 
     log::info!("{database:?}");
 
+    #[cfg(not(feature = "admin-api"))]
+    log::warn!(
+        "This program was compiled without the feature required for the admin-api, so it won't be started. This will not influence the main server."
+    );
+
+    #[cfg(feature = "admin-api")]
     if let Some(admin) = conf.admin().as_ref()
         && *admin.enable()
     {
