@@ -14,7 +14,7 @@ use std::{borrow::Cow, io::Write, process::Stdio, sync::Arc};
 use crate::{
     routes::limit_string,
     settings::{NetworkAllowSettings, NetworkPolicy, Settings},
-    structure::AllowNetworkCmdInput,
+    structure::{AllowNetworkCmdInput, ExerciseId},
 };
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, utoipa::ToSchema)]
@@ -105,7 +105,10 @@ pub async fn run_test(
             log::error!("unparsable specification at user={user:?}/slot={slot:?}/gen={spec_generation} [specid={spec_id:?}]: {err:?}");
             actix_web::error::ErrorFailedDependency("specification invalid")
         })?;
+    let exercise_id = ExerciseId::new_static(user.clone(), slot.clone());
+
     let report = inner_run(
+        Some(exercise_id),
         conf.clone(),
         spec,
         agent.as_deref(),
@@ -175,6 +178,7 @@ pub async fn debug_spec(
             actix_web::error::ErrorFailedDependency("specification invalid")
         })?;
     let report = inner_run(
+        None,
         conf.clone(),
         spec,
         agent.as_deref(),
@@ -212,6 +216,7 @@ pub async fn debug_spec(
 }
 
 fn inner_allow_network_op(
+    exercise: Option<&ExerciseId>,
     name: Option<&str>,
     allow: &NetworkAllowSettings,
     (url, data): &AllowNetData,
@@ -224,6 +229,9 @@ fn inner_allow_network_op(
     match allow {
         NetworkAllowSettings::Cmd { command, args } => {
             let input = AllowNetworkCmdInput {
+                user: exercise.map(|x| Cow::Borrowed(x.user.as_ref())),
+                slot: exercise.map(|x| Cow::Borrowed(x.slot.as_ref())),
+
                 scheme: Cow::Borrowed(url.scheme()),
                 host: url.host_str().map(Cow::Borrowed),
                 port: url.port_or_known_default(),
@@ -295,21 +303,28 @@ fn inner_allow_network_op(
     }
 }
 
-fn run_allow_network_command(network: &NetworkPolicy, req: &AllowNetData) -> Result<(), cerr> {
+fn run_allow_network_command(
+    exercise: Option<ExerciseId<'_>>,
+    network: &NetworkPolicy,
+    req: &AllowNetData,
+) -> Result<(), cerr> {
     let network = network.as_either();
 
     match network {
         Either::Left(map) => {
             for (key, val) in map.iter() {
-                inner_allow_network_op(Some(key), val, req)?;
+                inner_allow_network_op(exercise.as_ref(), Some(key), val, req)?;
             }
             Ok(())
         }
-        Either::Right(single) => inner_allow_network_op(None, single, req),
+        Either::Right(single) => inner_allow_network_op(exercise.as_ref(), None, single, req),
     }
 }
 
-async fn create_report_builder(conf: web::Data<Settings>) -> ReportBuilder<'static> {
+async fn create_report_builder(
+    exercise: Option<ExerciseId<'static>>,
+    conf: web::Data<Settings>,
+) -> ReportBuilder<'static> {
     let admin_port: Option<u16> = conf.admin_port();
 
     ReportBuilder::new_good_limits()
@@ -331,7 +346,7 @@ async fn create_report_builder(conf: web::Data<Settings>) -> ReportBuilder<'stat
         .add_allow_network_cerr_check(move |allow_input| {
             let conf = conf.clone();
             if let Some(netpol) = conf.network_policy() {
-                run_allow_network_command(netpol, allow_input)
+                run_allow_network_command(exercise.clone(), netpol, allow_input)
             } else {
                 Err(cerr::network_policy_other)
             }
@@ -339,6 +354,7 @@ async fn create_report_builder(conf: web::Data<Settings>) -> ReportBuilder<'stat
 }
 
 async fn inner_run(
+    exercise: Option<ExerciseId<'static>>,
     conf: web::Data<Settings>,
     spec: bast3st_eval::spec::Bast3StSpec,
     agent: Option<&str>,
@@ -353,7 +369,7 @@ async fn inner_run(
     );
     let report = tokio::spawn(async move {
         let spec_id = spec_id.map_or("".to_string(), |x| x.to_string());
-        let b = create_report_builder(conf)
+        let b = create_report_builder(exercise, conf)
             .await
             .with_spec(&spec)
             .with_log_pfx(Some(format!("{spec_id}#{id_str}").into()));
