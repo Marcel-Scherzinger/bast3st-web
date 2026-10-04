@@ -1,6 +1,9 @@
+use std::{collections::BTreeMap, path::PathBuf};
+
 use config::Config;
 use derive_getters::Getters;
 use serde::Deserialize;
+use sqlx::Either;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
 pub struct ServerSettings {
@@ -45,11 +48,30 @@ impl Default for ServerSettings {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(untagged)]
+pub enum NetworkAllowSettings {
+    Cmd {
+        command: PathBuf,
+        #[serde(default)]
+        args: Vec<String>,
+    },
+}
+
+pub type NetworkPolicy =
+    EitherUntagged<BTreeMap<String, NetworkAllowSettings>, NetworkAllowSettings>;
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
+pub struct PolicySettings {
+    network: Option<NetworkPolicy>,
+}
+
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
 pub struct Settings {
     admin: Option<AdminServerSettings>,
     server: ServerSettings,
     database: DatabaseSettings,
+    policy: Option<PolicySettings>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Getters)]
@@ -103,5 +125,34 @@ impl Settings {
         self.admin()
             .as_ref()
             .map(|admin| admin.port().unwrap_or(42039))
+    }
+    pub fn network_policy(&self) -> Option<&NetworkPolicy> {
+        self.policy.as_ref().and_then(|x| x.network.as_ref())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(untagged)]
+pub enum EitherUntagged<L, R> {
+    Left(L),
+    Right(R),
+}
+impl<L, R> EitherUntagged<L, R> {
+    pub fn into_either(self) -> Either<L, R> {
+        self.into()
+    }
+    pub fn as_either(&self) -> Either<&L, &R> {
+        match self {
+            Self::Left(l) => Either::Left(l),
+            Self::Right(l) => Either::Right(l),
+        }
+    }
+}
+impl<L, R> From<EitherUntagged<L, R>> for Either<L, R> {
+    fn from(value: EitherUntagged<L, R>) -> Self {
+        match value {
+            EitherUntagged::Left(x) => Self::Left(x),
+            EitherUntagged::Right(x) => Self::Right(x),
+        }
     }
 }

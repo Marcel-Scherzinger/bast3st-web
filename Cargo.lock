@@ -393,6 +393,7 @@ dependencies = [
  "config",
  "derive-getters",
  "dotenvy",
+ "either",
  "env_logger",
  "log",
  "passwords",

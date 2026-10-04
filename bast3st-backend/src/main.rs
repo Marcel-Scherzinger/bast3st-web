@@ -2,6 +2,7 @@ mod admin_routes;
 mod api_docs;
 mod routes;
 mod settings;
+mod structure;
 mod utils;
 
 use api_docs::scope;

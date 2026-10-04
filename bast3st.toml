@@ -23,3 +23,10 @@ database = "bast3st"
 # create a separate user with fewer permissions in a production system!
 username = "postgres"
 
+[policy.network.some-command]
+command = "echo"
+args = ["Hello!"]
+
+[policy.network.example]
+command = "examples/network-allow/network-allow.py"
+

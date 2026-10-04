@@ -23,6 +23,7 @@ utoipa-scalar = { version = "0.4.0", default-features = false, features = ["acti
 tokio = { version = "1.53.1", features = ["rt"] }
 passwords = { version = "3.1.18" }
 argon2 = "0.6.0"
+either = "1.18.0"
 
 [dependencies.bast3st-eval]
 git = "https://github.com/Marcel-Scherzinger/bast3st-eval"

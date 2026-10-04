@@ -2,12 +2,20 @@ use actix_web::{
     Result, post,
     web::{self, Json},
 };
-use bast3st_eval::{ProgramDocError, SpecRunError, catchable::cerr, evaluation::ReportBuilder};
+use bast3st_eval::{
+    ProgramDocError, SpecRunError,
+    catchable::cerr,
+    evaluation::{AllowNetData, ReportBuilder},
+};
 use smodel::ProjectDoc;
-use sqlx::PgPool;
-use std::sync::Arc;
+use sqlx::{Either, PgPool};
+use std::{borrow::Cow, io::Write, process::Stdio, sync::Arc};
 
-use crate::{routes::limit_string, settings::Settings};
+use crate::{
+    routes::limit_string,
+    settings::{NetworkAllowSettings, NetworkPolicy, Settings},
+    structure::AllowNetworkCmdInput,
+};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -203,6 +211,104 @@ pub async fn debug_spec(
     Ok(Json(report))
 }
 
+fn inner_allow_network_op(
+    name: Option<&str>,
+    allow: &NetworkAllowSettings,
+    (url, data): &AllowNetData,
+) -> Result<(), cerr> {
+    let log_pfx = if let Some(name) = name {
+        format!("policy.network.{name}")
+    } else {
+        "policy.network".to_string()
+    };
+    match allow {
+        NetworkAllowSettings::Cmd { command, args } => {
+            let input = AllowNetworkCmdInput {
+                scheme: Cow::Borrowed(url.scheme()),
+                host: url.host_str().map(Cow::Borrowed),
+                port: url.port_or_known_default(),
+                path: Cow::Borrowed(url.path()),
+                query: url.query_pairs().collect(),
+                url: Cow::Owned(url.to_string()),
+                data: Cow::Borrowed(data),
+            };
+            log::info!(
+                "[{log_pfx}] start external command {command:?} with args {args:?} and input {input:?} to find out if request should be allowed"
+            );
+            let input_ser = serde_json::to_string(&input).map_err(|err| {
+                log::error!("[{log_pfx}] failed to serialize input for external script {command:?} with args {args:?} and input {input:?}: {err:?}");
+                cerr::network_policy_other
+            })?;
+            let proc = std::process::Command::new(command)
+                .args(args)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn();
+            let mut proc = proc.map_err(|err| {
+                log::error!("[{log_pfx}] failed to spawn external script {command:?} with args {args:?} and input {input:?}: {err:?}");
+                cerr::network_policy_other
+            })?;
+
+            let stdin = proc.stdin.take();
+            stdin
+                .ok_or(String::from("no stdin of new process there to take"))
+                .and_then(|mut stdin| {
+                    stdin
+                        .write_all(input_ser.as_bytes())
+                        .map_err(|x| x.to_string())
+                }).map_err(|err| {
+                    log::error!("[{log_pfx}] failed to set stdin of external script {command:?} with args {args:?} and input {input:?}: {err:?}");
+                    cerr::network_policy_other
+                })?;
+
+            let status = if log::log_enabled!(log::Level::Debug) {
+                let out = proc.wait_with_output();
+                log::debug!("[{log_pfx}] external script output: {out:?}");
+                out.map(|o| o.status)
+            } else {
+                proc.wait()
+            };
+
+            let status = status.map_err(|err| {
+                    log::error!("[{log_pfx}] failed to wait for external script {command:?} with args {args:?} and input {input:?}: {err:?}");
+                    cerr::network_policy_other
+            })?;
+
+            match status.code() {
+                None => {
+                    log::error!(
+                        "[{log_pfx}] didn't find exit code for external script {command:?} with args {args:?} and input {input:?}, likely it was terminated by a signal"
+                    );
+                    Err(cerr::network_policy_other)
+                }
+                Some(0) => {
+                    log::info!("[{log_pfx}] allows the request to {url:?}");
+                    Ok(())
+                }
+                Some(exit) => {
+                    log::info!("[{log_pfx}] forbids the request to {url:?} with exit code {exit}");
+                    Err(cerr::network_policy_other)
+                }
+            }
+        }
+    }
+}
+
+fn run_allow_network_command(network: &NetworkPolicy, req: &AllowNetData) -> Result<(), cerr> {
+    let network = network.as_either();
+
+    match network {
+        Either::Left(map) => {
+            for (key, val) in map.iter() {
+                inner_allow_network_op(Some(key), val, req)?;
+            }
+            Ok(())
+        }
+        Either::Right(single) => inner_allow_network_op(None, single, req),
+    }
+}
+
 async fn create_report_builder(conf: web::Data<Settings>) -> ReportBuilder<'static> {
     let admin_port: Option<u16> = conf.admin_port();
 
@@ -221,6 +327,14 @@ async fn create_report_builder(conf: web::Data<Settings>) -> ReportBuilder<'stat
             ["http", "https"]
                 .contains(&url.scheme())
                 .ok_or(cerr::network_policy_schemeNotAllowed)
+        })
+        .add_allow_network_cerr_check(move |allow_input| {
+            let conf = conf.clone();
+            if let Some(netpol) = conf.network_policy() {
+                run_allow_network_command(netpol, allow_input)
+            } else {
+                Err(cerr::network_policy_other)
+            }
         })
 }
 
