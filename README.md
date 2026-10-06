@@ -1,3 +1,4 @@
+[![Project page](https://img.shields.io/badge/Project-Bast3St-pink)](https://marcel-scherzinger.github.io/bast3st)
 [![100% Rust](https://img.shields.io/badge/Rust-100%25-32c955?logo=rust)](https://rust-lang.org)
 [![Nix Flakes](https://img.shields.io/badge/Nix-flake-purple?logo=nixos&logoColor=white)](https://nixos.org/)
 [![direnv enabled](https://img.shields.io/badge/direnv-enabled-yellow)](https://direnv.net/)

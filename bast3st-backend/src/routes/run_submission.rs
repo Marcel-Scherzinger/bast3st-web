@@ -103,7 +103,7 @@ pub async fn run_test(
     let spec: bast3st_eval::spec::Bast3StSpec =
         serde_json::from_value(spec_content).map_err(|err| {
             log::error!("unparsable specification at user={user:?}/slot={slot:?}/gen={spec_generation} [specid={spec_id:?}]: {err:?}");
-            actix_web::error::ErrorFailedDependency("specification invalid")
+            actix_web::error::ErrorFailedDependency(format!("specification invalid: {err}"))
         })?;
     let exercise_id = ExerciseId::new_static(user.clone(), slot.clone());
 
@@ -175,7 +175,7 @@ pub async fn debug_spec(
     let spec: bast3st_eval::spec::Bast3StSpec = serde_json::from_value(spec_content.clone())
         .map_err(|err| {
             log::error!("unparsable specification: {err:?}");
-            actix_web::error::ErrorFailedDependency("specification invalid")
+            actix_web::error::ErrorFailedDependency(format!("specification invalid: {err}"))
         })?;
     let report = inner_run(
         None,
