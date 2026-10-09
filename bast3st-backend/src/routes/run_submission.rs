@@ -3,8 +3,7 @@ use actix_web::{
     web::{self, Json},
 };
 use bast3st_eval::{
-    ProgramDocError, SpecRunError,
-    catchable::cerr,
+    ProgramDocError, SpecRunError, cerr,
     evaluation::{AllowNetData, ReportBuilder},
 };
 use smodel::ProjectDoc;
